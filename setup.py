@@ -23,5 +23,5 @@ setuptools.setup(
     include_package_data=True,
     package_dir={"ucaptcha": "ucaptcha"},
     python_requires=">=3",
-    install_requires=["httpx"],
+    install_requires=["requests"],
 )

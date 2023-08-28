@@ -1,6 +1,7 @@
-import asyncio
+import json
+import time
 
-import httpx
+import requests
 
 from ucaptcha.exceptions import CaptchaException
 from ucaptcha.exceptions import KeyDoesNotExistException
@@ -21,69 +22,65 @@ def raise_error(error_code):
         raise CaptchaException(f"Unknown error: {error_code}")
 
 
-async def solve_anticaptcha(
+def solve_anticaptcha(
     api_key, site_key, url, user_agent, rqdata, proxy=None, proxy_ip=None
 ):
-    async with httpx.AsyncClient() as client:
-        logger.info("Initiating captcha task..")
-        parts = get_proxy_parts(proxy)
-        data = {
-            "clientKey": api_key,
-            "task": {
-                "type": "HCaptchaTaskProxyless",
-                "websiteURL": url,  # isInvisible removed
-                "userAgent": user_agent,
-                "websiteKey": site_key,
-                "enterprisePayload": {"rqdata": rqdata},
-            },
-        }
-        if proxy is not None and proxy_ip is not None and parts is not None:
-            data["task"]["type"] = "HCaptchaTask"
-            data["task"]["proxyType"] = parts["type"]
-            data["task"]["proxyAddress"] = proxy_ip
-            data["task"]["proxyPort"] = parts["port"]
-            if "username" in parts:
-                data["task"]["proxyLogin"] = parts["username"]
-            if "password" in parts:
-                data["task"]["proxyPassword"] = parts["password"]
+    logger.info("Initiating captcha task..")
+    parts = get_proxy_parts(proxy)
+    data = {
+        "clientKey": api_key,
+        "task": {
+            "type": "HCaptchaTaskProxyless",
+            "websiteURL": url,  # isInvisible removed
+            "userAgent": user_agent,
+            "websiteKey": site_key,
+            "enterprisePayload": {"rqdata": rqdata},
+        },
+    }
+    if proxy is not None and proxy_ip is not None and parts is not None:
+        data["task"]["type"] = "HCaptchaTask"
+        data["task"]["proxyType"] = parts["type"]
+        data["task"]["proxyAddress"] = proxy_ip
+        data["task"]["proxyPort"] = parts["port"]
+        if "username" in parts:
+            data["task"]["proxyLogin"] = parts["username"]
+        if "password" in parts:
+            data["task"]["proxyPassword"] = parts["password"]
 
-        request_url = "https://api.anti-captcha.com/createTask"
+    request_url = "https://api.anti-captcha.com/createTask"
+    try:
+        res = requests.post(request_url, json=data, timeout=300)
+        if res.status_code != 200:
+            return None
+        data = res.json()
+        if data["errorId"] > 0:
+            raise_error(data["errorCode"])
+        if "taskId" not in data:
+            logger.debug(data)
+            return None
+        task_id = data["taskId"]
+    except (requests.exceptions.RequestException, json.JSONDecodeError):
+        return None
+
+    while True:
+        data = {"clientKey": api_key, "taskId": task_id}
+        request_url = f"https://api.anti-captcha.com/getTaskResult"
         try:
-            res = await client.post(request_url, json=data, timeout=300)
+            res = requests.post(request_url, json=data, timeout=300)
             if res.status_code != 200:
                 return None
             data = res.json()
             if data["errorId"] > 0:
                 raise_error(data["errorCode"])
-            if "taskId" not in data:
-                logger.debug(data)
-                return None
-            task_id = data["taskId"]
-        except httpx.HTTPError:
-            return None
-
-        while True:
-            data = {
-                "clientKey": api_key,
-                "taskId": task_id,
-            }
-            request_url = f"https://api.anti-captcha.com/getTaskResult"
-            try:
-                res = await client.post(request_url, json=data, timeout=300)
-                if res.status_code != 200:
-                    return None
-                data = res.json()
-                if data["errorId"] > 0:
-                    raise_error(data["errorCode"])
-                status = data["status"]
-                if status == "processing":
-                    logger.info("Captcha not ready...")
-                    await asyncio.sleep(10)
-                    continue
-                if status == "ready":
-                    logger.info("Captcha ready.")
-                    return data["solution"]["gRecaptchaResponse"]
-            except httpx.HTTPError:
-                logger.exception("Failed to solve catpcha.")
-                await asyncio.sleep(10)
+            status = data["status"]
+            if status == "processing":
+                logger.info("Captcha not ready...")
+                time.sleep(10)
                 continue
+            if status == "ready":
+                logger.info("Captcha ready.")
+                return data["solution"]["gRecaptchaResponse"]
+        except (requests.exceptions.RequestException, json.JSONDecodeError):
+            logger.exception("Failed to solve catpcha.")
+            time.sleep(10)
+            continue
