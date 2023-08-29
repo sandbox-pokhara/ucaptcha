@@ -22,8 +22,15 @@ def raise_error(error_code):
         raise CaptchaException(f"Unknown error: {error_code}")
 
 
-def solve_anticaptcha(
-    api_key, site_key, url, user_agent, rqdata, proxy=None, proxy_ip=None
+def solve_capmonster(
+    api_key,
+    site_key,
+    url,
+    user_agent,
+    rqdata,
+    proxy=None,
+    proxy_ip=None,
+    cookies=None,
 ):
     logger.info("Initiating captcha task..")
     parts = get_proxy_parts(proxy)
@@ -31,12 +38,15 @@ def solve_anticaptcha(
         "clientKey": api_key,
         "task": {
             "type": "HCaptchaTaskProxyless",
-            "websiteURL": url,  # isInvisible removed
-            "userAgent": user_agent,
+            "websiteURL": url,
             "websiteKey": site_key,
-            "enterprisePayload": {"rqdata": rqdata},
+            "isInvisible": True,
+            "data": rqdata,
+            "userAgent": user_agent,
         },
     }
+    if cookies is not None:
+        data["task"]["cookies"] = cookies
     if proxy is not None and proxy_ip is not None and parts is not None:
         data["task"]["type"] = "HCaptchaTask"
         data["task"]["proxyType"] = parts["type"]
@@ -47,12 +57,13 @@ def solve_anticaptcha(
         if "password" in parts:
             data["task"]["proxyPassword"] = parts["password"]
 
-    request_url = "https://api.anti-captcha.com/createTask"
+    request_url = "https://api.capmonster.cloud/createTask"
     try:
         res = requests.post(request_url, json=data, timeout=300)
         if res.status_code != 200:
             return None
         data = res.json()
+
         if data["errorId"] > 0:
             raise_error(data["errorCode"])
         if "taskId" not in data:
@@ -64,7 +75,7 @@ def solve_anticaptcha(
 
     while True:
         data = {"clientKey": api_key, "taskId": task_id}
-        request_url = f"https://api.anti-captcha.com/getTaskResult"
+        request_url = f"https://api.capmonster.cloud/getTaskResult"
         try:
             res = requests.post(request_url, json=data, timeout=300)
             if res.status_code != 200:
