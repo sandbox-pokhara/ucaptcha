@@ -23,7 +23,14 @@ def raise_error(error_code):
 
 
 def solve_anticaptcha(
-    api_key, site_key, url, user_agent, rqdata, proxy=None, proxy_ip=None
+    api_key,
+    site_key,
+    url,
+    user_agent,
+    rqdata,
+    proxy=None,
+    proxy_ip=None,
+    extra_data=None,
 ):
     logger.info("Initiating captcha task..")
     parts = get_proxy_parts(proxy)
@@ -46,6 +53,9 @@ def solve_anticaptcha(
             data["task"]["proxyLogin"] = parts["username"]
         if "password" in parts:
             data["task"]["proxyPassword"] = parts["password"]
+
+    if extra_data is not None:
+        data.update(extra_data)
 
     request_url = "https://api.anti-captcha.com/createTask"
     try:

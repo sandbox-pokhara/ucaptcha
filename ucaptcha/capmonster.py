@@ -31,6 +31,7 @@ def solve_capmonster(
     proxy=None,
     proxy_ip=None,
     cookies=None,
+    extra_data=None,
 ):
     logger.info("Initiating captcha task..")
     parts = get_proxy_parts(proxy)
@@ -56,6 +57,9 @@ def solve_capmonster(
             data["task"]["proxyLogin"] = parts["username"]
         if "password" in parts:
             data["task"]["proxyPassword"] = parts["password"]
+
+    if extra_data is not None:
+        data.update(extra_data)
 
     request_url = "https://api.capmonster.cloud/createTask"
     try:
