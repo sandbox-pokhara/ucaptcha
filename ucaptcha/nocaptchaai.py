@@ -57,7 +57,7 @@ def solve_nocaptchaai(
         res = requests.post(
             request_url, json=data, headers=headers, timeout=300
         )
-        if res.status_code != 200:
+        if not res.ok:
             return None
         data = res.json()
         logger.debug(data)
