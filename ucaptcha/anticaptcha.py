@@ -60,8 +60,10 @@ def solve_anticaptcha(
     request_url = "https://api.anti-captcha.com/createTask"
     try:
         res = requests.post(request_url, json=data, timeout=300)
+        logger.debug(f"{res.status_code}, {res.text}")
+
         if res.status_code != 200:
-            return None
+            raise_error(f"{res.status_code}, {res.text}")
         data = res.json()
         if data["errorId"] > 0:
             raise_error(data["errorCode"])
@@ -77,8 +79,10 @@ def solve_anticaptcha(
         request_url = f"https://api.anti-captcha.com/getTaskResult"
         try:
             res = requests.post(request_url, json=data, timeout=300)
+            logger.debug(f"{res.status_code}, {res.text}")
+
             if res.status_code != 200:
-                return None
+                raise_error(f"{res.status_code}, {res.text}")
             data = res.json()
             if data["errorId"] > 0:
                 raise_error(data["errorCode"])

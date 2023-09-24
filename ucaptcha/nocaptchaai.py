@@ -4,12 +4,18 @@ import time
 import requests
 
 from ucaptcha.exceptions import CaptchaException
+from ucaptcha.exceptions import KeyDoesNotExistException
+from ucaptcha.exceptions import ZeroBalanceException
 from ucaptcha.logger import logger
 from ucaptcha.proxies import get_proxy_parts
 
 
 def raise_error(error_code):
-    # TODO: Add proper error handling
+    if "Invalid apikey" in error_code:
+        raise KeyDoesNotExistException
+    if error_code.startswith("402"):
+        raise ZeroBalanceException
+
     raise CaptchaException(f"Unknown error: {error_code}")
 
 
@@ -57,8 +63,9 @@ def solve_nocaptchaai(
         res = requests.post(
             request_url, json=data, headers=headers, timeout=300
         )
+        logger.debug(f"{res.status_code}, {res.text}")
         if not res.ok:
-            return None
+            raise_error(f"{res.status_code}, {res.text}")
         data = res.json()
         logger.debug(data)
         if data["status"] != "created":
@@ -73,10 +80,10 @@ def solve_nocaptchaai(
     while True:
         try:
             res = requests.get(task_url, headers=headers, timeout=300)
+            logger.debug(f"{res.status_code}, {res.text}")
             if res.status_code != 200:
-                return None
+                raise_error(f"{res.status_code}, {res.text}")
             data = res.json()
-            logger.debug(data)
             status = data["status"]
             if status == "failed":
                 raise_error(data["message"])
