@@ -5,7 +5,7 @@ with open("README.md", "r", encoding="utf-8") as fh:
 
 setuptools.setup(
     name="ucaptcha",
-    version="1.0.6",
+    version="1.0.7",
     author="Pradish Bijukchhe",
     author_email="pradishbijukchhe@gmail.com",
     description="Universal captcha solving python module",
