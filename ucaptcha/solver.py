@@ -1,3 +1,5 @@
+from ucaptcha.nopecha import solve_nopecha
+
 from .anticaptcha import solve_anticaptcha
 from .capmonster import solve_capmonster
 from .nocaptchaai import solve_nocaptchaai
@@ -40,6 +42,17 @@ def solve_captcha(
         )
     if service == "nocaptchaai":
         return solve_nocaptchaai(
+            api_key,
+            site_key,
+            url,
+            user_agent,
+            rqdata,
+            proxy,
+            proxy_ip,
+            extra_data,
+        )
+    if service == "nopecha":
+        return solve_nopecha(
             api_key,
             site_key,
             url,
