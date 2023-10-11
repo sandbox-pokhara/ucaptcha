@@ -94,7 +94,7 @@ def solve_nocaptchaai(
             if status == "processed":
                 logger.info("Captcha ready.")
                 return data["token"]
-
+            time.sleep(10)
         except (requests.exceptions.RequestException, json.JSONDecodeError):
             logger.exception("Failed to solve catpcha.")
             time.sleep(10)
